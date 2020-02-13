@@ -59,7 +59,7 @@ object DBSCANApp extends App {
 
   readAppProperties(conf)
   
-  println(conf)
+  println(conf.toDebugString())
   
   val sc = SparkContext.getOrCreate(conf)
   try {
