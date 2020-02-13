@@ -58,7 +58,9 @@ object DBSCANApp extends App {
     ))
 
   readAppProperties(conf)
-
+  
+  println(conf)
+  
   val sc = SparkContext.getOrCreate(conf)
   try {
     doMain(sc, sc.getConf)
