@@ -18,6 +18,10 @@ object DBSCANApp extends App {
       case 0 => "application.properties"
       case _ => args(0)
     }
+    
+    println(filename)
+    println(args(0))
+    
     val file = new File(filename)
     if (file.exists()) {
       val reader = new FileReader(file)
