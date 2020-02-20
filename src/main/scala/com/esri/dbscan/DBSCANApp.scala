@@ -61,7 +61,10 @@ object DBSCANApp extends App {
   try {
     doMain(sc, conf)
   } finally {
-    sc.stop()
+    if (sc.getConf.get("spark.app.id") == conf.get("spark.app.id")) {
+      sc.stop()
+      println("Stopped Spark")
+    }
   }
 
   def dbscan(sc: SparkContext,
