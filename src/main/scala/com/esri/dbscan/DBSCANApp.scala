@@ -57,7 +57,7 @@ object DBSCANApp extends App {
 
   val sc = SparkContext.getOrCreate(conf)
   try {
-    doMain(sc, sc.getConf)
+    doMain(sc, conf)
   } finally {
     sc.stop()
   }
