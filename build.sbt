@@ -4,13 +4,13 @@ name := "dbscan-spark"
 
 version := "0.7"
 
-scalaVersion := "2.10.6"
+scalaVersion := "2.11"
 
 publishMavenStyle := true
 
 resolvers += Resolver.mavenLocal
 
-sparkVersion := "1.6.2"
+sparkVersion := "2.4.4"
 
 sparkComponents := Seq("core")
 
