@@ -182,8 +182,6 @@ class DBSCANSpec extends FlatSpec with Matchers {
     val lines0 = Source.fromFile(part0).getLines.toSeq
     val lines1 = Source.fromFile(part1).getLines.toSeq
     val points = (lines0 ++ lines1).map(ClusterPoint(_))
-    println(lines0)
-    println(lines1)
     points should contain theSameElementsAs Seq(
       ClusterPoint("0,9.5,9.5,0.0,0:0:0:-1"),
       ClusterPoint("1,10.5,9.5,0.0,0:0:0:-1"),
