@@ -3,7 +3,7 @@ package com.esri.dbscan
 /**
   * Spatial envelope represented by the lower left corner and upper right corner.
   */
-case class Envp(xmin: Double, ymin: Double, xmax: Double, ymax: Double) {
+case class Envp(xmin: Double, ymin: Double, zmin: Double, xmax: Double, ymax: Double, zmax: Double) {
 
   /**
     * Convert point to an emit identifier.
@@ -12,7 +12,7 @@ case class Envp(xmin: Double, ymin: Double, xmax: Double, ymax: Double) {
     * @return the emit identifier.
     */
   def toEmitID(point: Point): Byte = {
-    toEmitID(point.x, point.y)
+    toEmitID(point.x, point.y, point.z)
   }
 
   /**
@@ -31,17 +31,43 @@ case class Envp(xmin: Double, ymin: Double, xmax: Double, ymax: Double) {
     * @param y the vertical location.
     * @return an emit identifier.
     */
-  def toEmitID(x: Double, y: Double): Byte = {
-    if (x < xmin) {
-      if (y < ymin) 1 else if (y > ymax) 3 else 2
-    } else if (x > xmax) {
-      if (y < ymin) 7 else if (y > ymax) 5 else 6
-    } else if (y < ymin) {
-      8
-    } else if (y > ymax) {
-      4
+  def toEmitID(x: Double, y: Double, z: Double): Byte = {
+    if (z < zmin) {
+      if (x < xmin) {
+        if (y < ymin) 1 else if (y > ymax) 3 else 2
+      } else if (x > xmax) {
+        if (y < ymin) 7 else if (y > ymax) 5 else 6
+      } else if (y < ymin) {
+        8
+      } else if (y > ymax) {
+        4
+      } else {
+        0
+      }
+    } else if (z > zmax) {
+      if (x < xmin) {
+        if (y < ymin) 21 else if (y > ymax) 23 else 22
+      } else if (x > xmax) {
+        if (y < ymin) 27 else if (y > ymax) 25 else 26
+      } else if (y < ymin) {
+        28
+      } else if (y > ymax) {
+        24
+      } else {
+        20
+      }
     } else {
-      0
+      if (x < xmin) {
+        if (y < ymin) 11 else if (y > ymax) 13 else 12
+      } else if (x > xmax) {
+        if (y < ymin) 17 else if (y > ymax) 15 else 16
+      } else if (y < ymin) {
+        18
+      } else if (y > ymax) {
+        14
+      } else {
+        10
+      }
     }
   }
 
@@ -51,7 +77,7 @@ case class Envp(xmin: Double, ymin: Double, xmax: Double, ymax: Double) {
     * @param offset the shrink value.
     * @return a new shrunk envelope.
     */
-  def shrink(offset: Double): Envp = Envp(xmin + offset, ymin + offset, xmax - offset, ymax - offset)
+  def shrink(offset: Double): Envp = Envp(xmin + offset, ymin + offset, zmin + offset, xmax - offset, ymax - offset, zmax + offset)
 
   /**
     * Check if supplied point is inside the envelope.
@@ -60,7 +86,7 @@ case class Envp(xmin: Double, ymin: Double, xmax: Double, ymax: Double) {
     * @return true if xmin<= point.x < xmax and ymin<= point.y < ymax otherwise false.
     */
   def isInside(point: Point): Boolean = {
-    isInside(point.x, point.y)
+    isInside(point.x, point.y, point.z)
   }
 
   /**
@@ -70,7 +96,7 @@ case class Envp(xmin: Double, ymin: Double, xmax: Double, ymax: Double) {
     * @param y the vertical location.
     * @return true if xmin <= x < xmax and ymin<= y < ymax otherwise false.
     */
-  def isInside(x: Double, y: Double): Boolean = {
-    xmin <= x && ymin <= y && x < xmax && y < ymax
+  def isInside(x: Double, y: Double, z: Double): Boolean = {
+    xmin <= x && ymin <= y && x < xmax && y < ymax && zmin <= z && z < zmax
   }
 }

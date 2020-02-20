@@ -9,7 +9,7 @@ import scala.collection.mutable.ArrayBuffer
   * @param x  the horizontal 2D placement.
   * @param y  the vertical 2D placement.
   */
-class Point(val id: Long, val x: Double, val y: Double) extends Euclid {
+class Point(val id: Long, val x: Double, val y: Double, val z: Double) extends Euclid {
 
   /**
     * Convert this point to a sequence of <code>Cell</code> instances based on its location in its parent cell.
@@ -23,38 +23,99 @@ class Point(val id: Long, val x: Double, val y: Double) extends Euclid {
   def toCells(cellSize: Double, eps: Double): Seq[Cell] = {
     val xfac = (x / cellSize).floor
     val yfac = (y / cellSize).floor
+    val zfac = (z / cellSize).floor
+
     val cx = xfac * cellSize
     val cy = yfac * cellSize
+    val cz = zfac * cellSize
+
     val xmin = cx + eps
     val ymin = cy + eps
+    val zmin = cz + eps
+
     val xmax = cx + cellSize - eps
     val ymax = cy + cellSize - eps
+    val zmax = cz + cellSize - eps
+
     val row = yfac.toInt
     val col = xfac.toInt
+    val lay = zfac.toInt
+
     val cellArr = new ArrayBuffer[Cell](4)
-    cellArr += Cell(row, col)
-    if (x < xmin) {
-      cellArr += Cell(row, col - 1)
-      if (y < ymin) {
-        cellArr += Cell(row - 1, col - 1)
-        cellArr += Cell(row - 1, col)
+    cellArr += Cell(row, col, lay)
+
+    if (z < zmin) {
+      if (x < xmin) {
+        cellArr += Cell(row, col - 1, lay -1)
+        if (y < ymin) {
+          cellArr += Cell(row - 1, col - 1, lay -1)
+          cellArr += Cell(row - 1, col, lay -1)
+        } else if (y > ymax) {
+          cellArr += Cell(row + 1, col - 1, lay -1)
+          cellArr += Cell(row + 1, col, lay -1)
+        }
+      } else if (x > xmax) {
+        cellArr += Cell(row, col + 1, lay -1)
+        if (y < ymin) {
+          cellArr += Cell(row - 1, col + 1, lay -1)
+          cellArr += Cell(row - 1, col, lay -1)
+        } else if (y > ymax) {
+          cellArr += Cell(row + 1, col + 1, lay -1)
+          cellArr += Cell(row + 1, col, lay -1)
+        }
+      } else if (y < ymin) {
+        cellArr += Cell(row - 1, col, lay -1)
       } else if (y > ymax) {
-        cellArr += Cell(row + 1, col - 1)
-        cellArr += Cell(row + 1, col)
+        cellArr += Cell(row + 1, col, lay -1)
       }
-    } else if (x > xmax) {
-      cellArr += Cell(row, col + 1)
-      if (y < ymin) {
-        cellArr += Cell(row - 1, col + 1)
-        cellArr += Cell(row - 1, col)
+    } else if ( z > zmax) {
+      if (x < xmin) {
+        cellArr += Cell(row, col - 1, lay+1)
+        if (y < ymin) {
+          cellArr += Cell(row - 1, col - 1, lay+1)
+          cellArr += Cell(row - 1, col, lay+1)
+        } else if (y > ymax) {
+          cellArr += Cell(row + 1, col - 1, lay+1)
+          cellArr += Cell(row + 1, col, lay+1)
+        }
+      } else if (x > xmax) {
+        cellArr += Cell(row, col + 1, lay+1)
+        if (y < ymin) {
+          cellArr += Cell(row - 1, col + 1, lay+1)
+          cellArr += Cell(row - 1, col, lay+1)
+        } else if (y > ymax) {
+          cellArr += Cell(row + 1, col + 1, lay+1)
+          cellArr += Cell(row + 1, col, lay+1)
+        }
+      } else if (y < ymin) {
+        cellArr += Cell(row - 1, col, lay+1)
       } else if (y > ymax) {
-        cellArr += Cell(row + 1, col + 1)
-        cellArr += Cell(row + 1, col)
+        cellArr += Cell(row + 1, col, lay+1)
       }
-    } else if (y < ymin) {
-      cellArr += Cell(row - 1, col)
-    } else if (y > ymax) {
-      cellArr += Cell(row + 1, col)
+    } else {
+      if (x < xmin) {
+        cellArr += Cell(row, col - 1, lay)
+        if (y < ymin) {
+          cellArr += Cell(row - 1, col - 1, lay)
+          cellArr += Cell(row - 1, col, lay)
+        } else if (y > ymax) {
+          cellArr += Cell(row + 1, col - 1, lay)
+          cellArr += Cell(row + 1, col, lay)
+        }
+      } else if (x > xmax) {
+        cellArr += Cell(row, col + 1, lay)
+        if (y < ymin) {
+          cellArr += Cell(row - 1, col + 1, lay)
+          cellArr += Cell(row - 1, col, lay)
+        } else if (y > ymax) {
+          cellArr += Cell(row + 1, col + 1, lay)
+          cellArr += Cell(row + 1, col, lay)
+        }
+      } else if (y < ymin) {
+        cellArr += Cell(row - 1, col, lay)
+      } else if (y > ymax) {
+        cellArr += Cell(row + 1, col, lay)
+      }
     }
     cellArr
   }
@@ -62,7 +123,7 @@ class Point(val id: Long, val x: Double, val y: Double) extends Euclid {
   /**
     * @return text representation of this instance.
     */
-  override def toString(): String = s"Point($id,$x,$y)"
+  override def toString(): String = s"Point($id,$x,$y,$z)"
 
 }
 
@@ -78,7 +139,7 @@ object Point extends Serializable {
     * @param y  the vertical placement
     * @return a new <code>Point</code> instance.
     */
-  def apply(id: Long, x: Double, y: Double) = {
-    new Point(id, x, y)
+  def apply(id: Long, x: Double, y: Double, z: Double) = {
+    new Point(id, x, y, z)
   }
 }

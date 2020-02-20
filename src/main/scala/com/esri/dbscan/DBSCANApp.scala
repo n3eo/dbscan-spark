@@ -6,21 +6,19 @@ import java.util.Properties
 import com.esri.dbscan.DBSCANStatus.DBSCANStatus
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
+import scala.math.{log, ceil, pow}
 
 import scala.collection.JavaConverters._
 
 object DBSCANApp extends App {
 
-  type Cluster = (Int, Int, Int) // rowID, colID, clusterID
+  type Cluster = (Int, Int, Int, Int) // layId, rowID, colID, clusterID
 
   def readAppProperties(conf: SparkConf): Unit = {
     val filename = args.length match {
       case 0 => "application.properties"
       case _ => args(0)
     }
-    
-    println(filename)
-    println(args(0))
     
     val file = new File(filename)
     if (file.exists()) {
@@ -59,11 +57,9 @@ object DBSCANApp extends App {
 
   readAppProperties(conf)
   
-  println(conf.toDebugString)
-  
   val sc = SparkContext.getOrCreate(conf)
   try {
-    doMain(sc, sc.getConf)
+    doMain(sc, conf)
   } finally {
     sc.stop()
   }
@@ -87,7 +83,7 @@ object DBSCANApp extends App {
         // Convert the points to dbscan points.
         val points = pointIter
           .map(point => {
-            DBSCANPoint(point, cell.row, cell.col, border.isInside(point), inside.toEmitID(point))
+            DBSCANPoint(point, cell.row, cell.col, cell.lay, border.isInside(point), inside.toEmitID(point))
           })
         // Perform local DBSCAN on all the points in that cell and identify each local cluster with a negative non-zero value.
         DBSCAN2(eps, minPoints).cluster(points)
@@ -98,7 +94,7 @@ object DBSCANApp extends App {
     // Create a graph that relates the distributed local clusters based on their common emitted points.
     val graph = emitted
       .filter(_.emitID > 0)
-      .map(point => point.id -> (point.row, point.col, point.clusterID))
+      .map(point => point.id -> (point.row, point.col, point.lay, point.clusterID))
       .groupByKey(numPartitions)
       .aggregate(Graph[Cluster]())(
         (graph, tup) => {
@@ -118,7 +114,7 @@ object DBSCANApp extends App {
       .mapPartitions(iter => {
         val globalMap = globalBC.value
         iter.map(point => {
-          val key = (point.row, point.col, point.clusterID)
+          val key = (point.row, point.col, point.lay, point.clusterID)
           point.clusterID = globalMap.getOrElse(key, point.clusterID)
           point
         })
@@ -131,7 +127,6 @@ object DBSCANApp extends App {
     val eps = conf.getDouble(DBSCANProp.DBSCAN_EPS, 5)
     val minPoints = conf.getInt(DBSCANProp.DBSCAN_MIN_POINTS, 5)
     val cellSize = conf.getDouble(DBSCANProp.DBSCAN_CELL_SIZE, eps * 10.0)
-    val numPartitions = conf.getInt(DBSCANProp.DBSCAN_NUM_PARTITIONS, 8)
 
     val fieldSeparator = conf.get(DBSCANProp.FIELD_SEPARATOR, " ") match {
       case "\t" => '\t'
@@ -140,6 +135,7 @@ object DBSCANApp extends App {
     val fieldId = conf.getInt(DBSCANProp.FIELD_ID, 0)
     val fieldX = conf.getInt(DBSCANProp.FIELD_X, 1)
     val fieldY = conf.getInt(DBSCANProp.FIELD_Y, 2)
+    val fieldZ = conf.getInt(DBSCANProp.FIELD_Y, 3)
 
     val points = sc
       .textFile(inputPath)
@@ -147,11 +143,16 @@ object DBSCANApp extends App {
         // Convert each line to a Point instance.
         try {
           val tokens = line.split(fieldSeparator)
-          Some(Point(tokens(fieldId).toLong, tokens(fieldX).toDouble, tokens(fieldY).toDouble))
+          Some(Point(tokens(fieldId).toLong, tokens(fieldX).toDouble, tokens(fieldY).toDouble, tokens(fieldZ).toDouble))
         } catch {
           case _: Throwable => None
         }
       })
+
+
+    val numPointsPerPartition = conf.getInt(DBSCANProp.DBSCAN_NUM_POINTS_PER_PARTITION, 2000) 
+    val numPartitions = conf.getInt(DBSCANProp.DBSCAN_NUM_PARTITIONS, pow(2, (log( (points.count / numPointsPerPartition) )/log(2)).ceil).toInt)
+
     dbscan(sc, points, eps, minPoints, cellSize, numPartitions)
       .map(_.toText)
       .saveAsTextFile(outputPath)

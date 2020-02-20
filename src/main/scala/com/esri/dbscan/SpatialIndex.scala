@@ -11,10 +11,10 @@ import scala.collection.mutable.ArrayBuffer
   */
 case class SpatialIndex(eps: Double) {
 
-  type SIKey = (Int, Int)
+  type SIKey = (Int, Int, Int)
   type SIVal = mutable.ArrayBuffer[DBSCANPoint]
 
-  val grid = mutable.Map[SIKey, SIVal]()
+  val grid3d = mutable.Map[SIKey, SIVal]()
 
   /**
     * Index supplied point.
@@ -25,7 +25,8 @@ case class SpatialIndex(eps: Double) {
   def +(point: DBSCANPoint): SpatialIndex = {
     val c = (point.x / eps).floor.toInt
     val r = (point.y / eps).floor.toInt
-    grid.getOrElseUpdate((r, c), ArrayBuffer[DBSCANPoint]()) += point
+    val l = (point.z / eps).floor.toInt
+    grid3d.getOrElseUpdate((l, r, c), ArrayBuffer[DBSCANPoint]()) += point
     this
   }
 
@@ -40,16 +41,21 @@ case class SpatialIndex(eps: Double) {
   def findNeighbors(point: DBSCANPoint): Seq[DBSCANPoint] = {
     val c = (point.x / eps).floor.toInt
     val r = (point.y / eps).floor.toInt
+    val l = (point.z / eps).floor.toInt
 
     val xmin = point.x - eps
     val ymin = point.y - eps
+    val zmin = point.z - eps
     val xmax = point.x + eps
     val ymax = point.y + eps
+    val zmax = point.z + eps
 
-    (r - 1 to r + 1).flatMap(i =>
-      (c - 1 to c + 1).flatMap(j =>
-        grid.getOrElse((i, j), Seq.empty)
-          .filter(point => xmin < point.x && point.x < xmax && ymin < point.y && point.y < ymax)
+    (l - 1 to l + 1).flatMap(h =>
+      (r - 1 to r + 1).flatMap(i =>
+        (c - 1 to c + 1).flatMap(j =>
+          grid3d.getOrElse((h, i, j), Seq.empty)
+            .filter(point => xmin < point.x && point.x < xmax && ymin < point.y && point.y < ymax && zmin < point.z && point.z < zmax)
+        )
       )
     )
   }

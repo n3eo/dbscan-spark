@@ -20,6 +20,11 @@ trait Euclid extends Serializable {
   def y(): Double
 
   /**
+    * @return the depth position.
+    */
+  def z(): Double
+
+  /**
     * Check if supplied point is the same as this point. This is a naive implementation as it checks only the point identifier.
     *
     * @param other the other point.

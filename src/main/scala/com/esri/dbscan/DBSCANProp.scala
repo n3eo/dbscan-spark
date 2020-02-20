@@ -7,8 +7,10 @@ object DBSCANProp extends Serializable {
   val DBSCAN_MIN_POINTS = "dbscan.min.points"
   val DBSCAN_CELL_SIZE = "dbscan.cell.size"
   val DBSCAN_NUM_PARTITIONS = "dbscan.num.partitions"
+  val DBSCAN_NUM_POINTS_PER_PARTITION = "dbscan.num.points.per.partition"
   val FIELD_SEPARATOR = "field.separator"
   val FIELD_ID = "field.id"
   val FIELD_X = "field.x"
   val FIELD_Y = "field.y"
+  val FIELD_Z = "field.z"
 }

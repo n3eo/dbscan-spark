@@ -14,8 +14,10 @@ package com.esri.dbscan
 class DBSCANPoint(val id: Long,
                   val x: Double,
                   val y: Double,
+                  val z: Double,
                   val row: Int,
                   val col: Int,
+                  val lay: Int,
                   val inside: Boolean,
                   val emitID: Byte
                  ) extends Euclid {
@@ -33,20 +35,20 @@ class DBSCANPoint(val id: Long,
     * @return global cluster identifier.
     */
   def globalID(): String = {
-    if (clusterID < 0) s"$row:$col:$clusterID" else clusterID.toString
+    if (clusterID < 0) s"$row:$col:$lay:$clusterID" else clusterID.toString
   }
 
   /**
     * @return simple text representation.
     */
   def toText(): String = {
-    s"$id,$x,$y,$globalID"
+    s"$id,$x,$y,$z,$globalID"
   }
 
   /**
     * @return text representation of this instance.
     */
-  override def toString = s"DBSCANPoint($id,$x,$y,row=$row,col=$col,inside=$inside,emitID=$emitID,globalID=$globalID)"
+  override def toString = s"DBSCANPoint($id,$x,$y,$z,row=$row,col=$col,lay=$lay,inside=$inside,emitID=$emitID,globalID=$globalID)"
 }
 
 /**
@@ -56,23 +58,23 @@ object DBSCANPoint extends Serializable {
 
   def apply(line: String): DBSCANPoint = {
     line.split(' ') match {
-      case Array(id, x, y) => apply(id.toLong, x.toDouble, y.toDouble)
+      case Array(id, x, y, z) => apply(id.toLong, x.toDouble, y.toDouble, z.toDouble)
     }
   }
 
   def apply(point: Point): DBSCANPoint = {
-    new DBSCANPoint(point.id, point.x, point.y, 0, 0, true, 0)
+    new DBSCANPoint(point.id, point.x, point.y, point.z, 0, 0, 0, true, 0)
   }
 
-  def apply(id: Long, x: Double, y: Double): DBSCANPoint = {
-    new DBSCANPoint(id, x, y, 0, 0, true, 0)
+  def apply(id: Long, x: Double, y: Double, z: Double): DBSCANPoint = {
+    new DBSCANPoint(id, x, y, z, 0, 0, 0, true, 0)
   }
 
-  def apply(id: Long, x: Double, y: Double, emitID: Byte): DBSCANPoint = {
-    new DBSCANPoint(id, x, y, 0, 0, true, emitID)
+  def apply(id: Long, x: Double, y: Double, z: Double, emitID: Byte): DBSCANPoint = {
+    new DBSCANPoint(id, x, y, z, 0, 0, 0, true, emitID)
   }
 
-  def apply(point: Point, row: Int, col: Int, inside: Boolean, emitID: Byte): DBSCANPoint = {
-    new DBSCANPoint(point.id, point.x, point.y, row, col, inside, emitID)
+  def apply(point: Point, row: Int, col: Int, lay: Int, inside: Boolean, emitID: Byte): DBSCANPoint = {
+    new DBSCANPoint(point.id, point.x, point.y, point.z, row, col, lay, inside, emitID)
   }
 }

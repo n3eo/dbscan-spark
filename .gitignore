@@ -6,3 +6,4 @@ project/project/
 project/target/
 .ipynb_checkpoints/
 
+.vscode/tasks.json

@@ -8,16 +8,16 @@ import org.scalatest.{FlatSpec, Matchers}
 
 import scala.io.Source
 
-case class ClusterPoint(pointId: Int, x: Double, y: Double, clusterId: String) {
+case class ClusterPoint(pointId: Int, x: Double, y: Double, z: Double, clusterId: String) {
   def toText(): String = {
-    s"$pointId $x $y"
+    s"$pointId $x $y $z"
   }
 }
 
 object ClusterPoint {
   def apply(line: String): ClusterPoint = {
     line.split(',') match {
-      case Array(id, x, y, c) => new ClusterPoint(id.toInt, x.toDouble, y.toDouble, c)
+      case Array(id, x, y, z, c) => new ClusterPoint(id.toInt, x.toDouble, y.toDouble, z.toDouble, c)
     }
   }
 }
@@ -33,7 +33,7 @@ class DBSCANSpec extends FlatSpec with Matchers {
     conf.set("spark.ui.enabled", "false")
     conf.set(DBSCANProp.INPUT_PATH, "src/test/resources/erik.txt")
     conf.set(DBSCANProp.OUTPUT_PATH, outputPath)
-    conf.set(DBSCANProp.DBSCAN_EPS, "2")
+    conf.set(DBSCANProp.DBSCAN_EPS, "3")
     conf.set(DBSCANProp.DBSCAN_MIN_POINTS, "3")
     conf.set(DBSCANProp.DBSCAN_NUM_PARTITIONS, "2")
     val sc = new SparkContext(conf)
@@ -50,10 +50,10 @@ class DBSCANSpec extends FlatSpec with Matchers {
     val lines1 = Source.fromFile(part1).getLines.toSeq
     val points = (lines0 ++ lines1).map(ClusterPoint(_))
     points should contain theSameElementsAs Seq(
-      ClusterPoint("0,37.6,30.0,1"),
-      ClusterPoint("1,39.2,30.0,1"),
-      ClusterPoint("2,40.8,30.0,1"),
-      ClusterPoint("3,42.4,30.0,1")
+      ClusterPoint("0,37.6,30.0,0.0,1"),
+      ClusterPoint("1,39.2,30.0,0.0,1"),
+      ClusterPoint("2,40.8,30.0,0.0,1"),
+      ClusterPoint("3,42.4,30.0,0.0,1")
     )
   }
 
@@ -83,10 +83,10 @@ class DBSCANSpec extends FlatSpec with Matchers {
     val lines1 = Source.fromFile(part1).getLines.toSeq
     val points = (lines0 ++ lines1).map(ClusterPoint(_))
     points should contain theSameElementsAs Seq(
-      ClusterPoint(0, 29.5, 29.5, "1:1:-1"),
-      ClusterPoint(1, 30.5, 29.5, "1:1:-1"),
-      ClusterPoint(2, 30.0, 30.5, "1:1:-1"),
-      ClusterPoint(3, 229.5, 229.5, "0")
+      ClusterPoint(0, 29.5, 29.5, 0.0, "1:1:0:-1"),
+      ClusterPoint(1, 30.5, 29.5, 0.0, "1:1:0:-1"),
+      ClusterPoint(2, 30.0, 30.5, 0.0, "1:1:0:-1"),
+      ClusterPoint(3, 229.5, 229.5, 0.0, "0")
     )
   }
 
@@ -116,9 +116,9 @@ class DBSCANSpec extends FlatSpec with Matchers {
     val lines1 = Source.fromFile(part1).getLines.toSeq
     val points = (lines0 ++ lines1).map(ClusterPoint(_))
     points should contain theSameElementsAs Seq(
-      ClusterPoint("0,19.5,19.5,1"),
-      ClusterPoint("1,20.5,19.5,1"),
-      ClusterPoint("2,20.5,20.5,1")
+      ClusterPoint("0,19.5,19.5,0.0,1"),
+      ClusterPoint("1,20.5,19.5,0.0,1"),
+      ClusterPoint("2,20.5,20.5,0.0,1")
     )
   }
 
@@ -148,12 +148,12 @@ class DBSCANSpec extends FlatSpec with Matchers {
     val lines1 = Source.fromFile(part1).getLines.toSeq
     val points = (lines0 ++ lines1).map(ClusterPoint(_))
     points should contain theSameElementsAs Seq(
-      ClusterPoint("0,9.5,9.5,0:0:-1"),
-      ClusterPoint("1,10.5,9.5,0:0:-1"),
-      ClusterPoint("2,10.5,10.5,0:0:-1"),
-      ClusterPoint("3,29.5,29.5,1:1:-1"),
-      ClusterPoint("4,30.5,29.5,1:1:-1"),
-      ClusterPoint("5,30.5,30.5,1:1:-1")
+      ClusterPoint("3,29.5,29.5,0.0,1:1:0:-1"), 
+      ClusterPoint("4,30.5,29.5,0.0,1:1:0:-1"), 
+      ClusterPoint("5,30.5,30.5,0.0,1:1:0:-1"), 
+      ClusterPoint("0,9.5,9.5,0.0,0:0:0:-1"), 
+      ClusterPoint("1,10.5,9.5,0.0,0:0:0:-1"), 
+      ClusterPoint("2,10.5,10.5,0.0,0:0:0:-1")
     )
   }
 
@@ -182,13 +182,15 @@ class DBSCANSpec extends FlatSpec with Matchers {
     val lines0 = Source.fromFile(part0).getLines.toSeq
     val lines1 = Source.fromFile(part1).getLines.toSeq
     val points = (lines0 ++ lines1).map(ClusterPoint(_))
+    println(lines0)
+    println(lines1)
     points should contain theSameElementsAs Seq(
-      ClusterPoint("0,9.5,9.5,0:0:-1"),
-      ClusterPoint("1,10.5,9.5,0:0:-1"),
-      ClusterPoint("2,10.5,10.5,0:0:-1"),
-      ClusterPoint("3,39.5,39.5,1"),
-      ClusterPoint("4,40.5,39.5,1"),
-      ClusterPoint("5,40.5,40.5,1")
+      ClusterPoint("0,9.5,9.5,0.0,0:0:0:-1"),
+      ClusterPoint("1,10.5,9.5,0.0,0:0:0:-1"),
+      ClusterPoint("2,10.5,10.5,0.0,0:0:0:-1"),
+      ClusterPoint("3,39.5,39.5,0.0,1"),
+      ClusterPoint("4,40.5,39.5,0.0,1"),
+      ClusterPoint("5,40.5,40.5,0.0,1")
     )
   }
 
@@ -201,7 +203,7 @@ class DBSCANSpec extends FlatSpec with Matchers {
     conf.set("spark.ui.enabled", "false")
     conf.set(DBSCANProp.INPUT_PATH, "src/test/resources/randall_4.txt")
     conf.set(DBSCANProp.OUTPUT_PATH, outputPath)
-    conf.set(DBSCANProp.DBSCAN_EPS, "2")
+    conf.set(DBSCANProp.DBSCAN_EPS, "3")
     conf.set(DBSCANProp.DBSCAN_MIN_POINTS, "3")
     conf.set(DBSCANProp.DBSCAN_NUM_PARTITIONS, "2")
     val sc = new SparkContext(conf)
@@ -218,16 +220,16 @@ class DBSCANSpec extends FlatSpec with Matchers {
     val lines1 = Source.fromFile(part1).getLines.toSeq
     val points = (lines0 ++ lines1).map(ClusterPoint(_))
     points should contain theSameElementsAs Seq(
-      ClusterPoint(2, 40.8, 30.0, "1"),
-      ClusterPoint(0, 37.6, 30.0, "1"),
-      ClusterPoint(1, 39.2, 30.0, "1")
+      ClusterPoint(2, 40.8, 30.0, 0, "1"),
+      ClusterPoint(0, 37.6, 30.0, 0, "1"),
+      ClusterPoint(1, 39.2, 30.0, 0, "1")
     )
   }
 
   it should "test diagonal points" in {
     val inpPoints = (9.5 to 30.5 by 1.0).zipWithIndex.map {
       case (d, i) => {
-        ClusterPoint(i, d, d, "1")
+        ClusterPoint(i, d, d, 0, "1")
       }
     }
     val uuid = UUID.randomUUID().toString

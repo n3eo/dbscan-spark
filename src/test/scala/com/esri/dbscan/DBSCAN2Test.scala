@@ -8,12 +8,12 @@ class DBSCAN2Test extends FlatSpec with Matchers {
 
   it should "find one cluster" in {
     val points = Array(
-      DBSCANPoint(0, 0, 0),
-      DBSCANPoint(1, 0, 2),
-      DBSCANPoint(2, 0, 4),
-      DBSCANPoint(3, 0, 6),
-      DBSCANPoint(4, 0, 8),
-      DBSCANPoint(5, 3, 0)
+      DBSCANPoint(0, 0, 0, 0),
+      DBSCANPoint(1, 0, 2, 1),
+      DBSCANPoint(2, 0, 4, 3),
+      DBSCANPoint(3, 0, 6, 5),
+      DBSCANPoint(4, 0, 8, 7),
+      DBSCANPoint(5, 3, 0, 0)
     )
     DBSCAN2(2.5, 2)
       .cluster(points)
@@ -24,7 +24,7 @@ class DBSCAN2Test extends FlatSpec with Matchers {
 
     val points = Source.fromURL(getClass.getResource("/dat_4_6_6_20.txt")).getLines().map(line => {
       val splits = line.split(' ')
-      DBSCANPoint(splits(0).toInt, splits(1).toDouble, splits(2).toDouble)
+      DBSCANPoint(splits(0).toInt, splits(1).toDouble, splits(2).toDouble, 0)
     }).toIterable
 
     val results = Source.fromURL(getClass.getResource("/res_4_6_6_20.txt")).getLines().map(line => {
@@ -52,7 +52,7 @@ class DBSCAN2Test extends FlatSpec with Matchers {
 
     val points = Source.fromURL(getClass.getResource("/dat_4_10_20_20.txt")).getLines().map(line => {
       val splits = line.split(' ')
-      DBSCANPoint(splits(0).toInt, splits(1).toDouble, splits(2).toDouble)
+      DBSCANPoint(splits(0).toInt, splits(1).toDouble, splits(2).toDouble, 0)
     }).toIterable
 
     val results = Source.fromURL(getClass.getResource("/res_4_10_20_20.txt")).getLines().map(line => {
