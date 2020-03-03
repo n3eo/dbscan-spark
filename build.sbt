@@ -2,7 +2,7 @@ organization := "com.esri"
 
 name := "dbscan-spark"
 
-version := "0.7"
+version := "0.8"
 
 scalaVersion := "2.11"
 
@@ -21,5 +21,5 @@ assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeSca
 mainClass in assembly := Some("com.esri.dbscan.DBSCANApp")
 
 libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "2.2.3" % "test"
+  "org.scalatest" %% "scalatest" % "3.1.1" % "test"
 )
