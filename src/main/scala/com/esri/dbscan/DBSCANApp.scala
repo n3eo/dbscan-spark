@@ -10,64 +10,26 @@ import scala.math.{log, ceil, pow}
 
 import scala.collection.JavaConverters._
 
-object DBSCANApp extends App {
+import org.apache.spark.sql.{Dataset, Row, DataFrame}
+
+import org.apache.spark
+
+object DBSCANApp {
 
   type Cluster = (Int, Int, Int, Int) // layId, rowID, colID, clusterID
 
-  def readAppProperties(conf: SparkConf): Unit = {
-    val filename = args.length match {
-      case 0 => "application.properties"
-      case _ => args(0)
-    }
-    
-    val file = new File(filename)
-    if (file.exists()) {
-      val reader = new FileReader(file)
-      try {
-        val properties = new Properties()
-        properties.load(reader)
-        properties.asScala.foreach { case (k, v) => {
-          conf.set(k, v)
-        }
-        }
-      }
-      finally {
-        reader.close()
-      }
-    }
-    else {
-      Console.err.println(s"The properties file '$filename' does not exist !")
-      sys.exit(-1)
-    }
-  }
+  var eps : Double = 3
+  var minPoints : Int = 10
+  var cellSize : Double = 0
+  var numPartitions : Int = 0
+  var numPointsPerPartition : Int = 2000
 
-  val conf = new SparkConf()
-    .setAppName("DBSCANApp")
-    .set("spark.app.id", "DBSCANApp")
-    .registerKryoClasses(Array(
-      classOf[Cell],
-      classOf[DBSCAN2],
-      classOf[DBSCANStatus],
-      classOf[DBSCANPoint],
-      classOf[Envp],
-      classOf[Graph[Cluster]],
-      classOf[Point],
-      classOf[SpatialIndex]
-    ))
+  private var fieldId = 0
+  private var fieldX = 1
+  private var fieldY = 2
+  private var fieldZ = 3
 
-  readAppProperties(conf)
-  
-  val sc = SparkContext.getOrCreate(conf)
-  try {
-    doMain(sc, conf)
-  } finally {
-    if (sc.getConf.get("spark.app.id") == conf.get("spark.app.id")) {
-      sc.stop()
-      println("Stopped Spark")
-    }
-  }
-
-  def dbscan(sc: SparkContext,
+  private def dbscan(sc: SparkContext,
              points: RDD[Point],
              eps: Double,
              minPoints: Int,
@@ -124,40 +86,42 @@ object DBSCANApp extends App {
       })
   }
 
-  def doMain(sc: SparkContext, conf: SparkConf): Unit = {
-    val inputPath = conf.get(DBSCANProp.INPUT_PATH)
-    val outputPath = conf.get(DBSCANProp.OUTPUT_PATH)
-    val eps = conf.getDouble(DBSCANProp.DBSCAN_EPS, 5)
-    val minPoints = conf.getInt(DBSCANProp.DBSCAN_MIN_POINTS, 5)
-    val cellSize = conf.getDouble(DBSCANProp.DBSCAN_CELL_SIZE, eps * 10.0)
-
-    val fieldSeparator = conf.get(DBSCANProp.FIELD_SEPARATOR, " ") match {
-      case "\t" => '\t'
-      case text: String => text(0)
-    }
-    val fieldId = conf.getInt(DBSCANProp.FIELD_ID, 0)
-    val fieldX = conf.getInt(DBSCANProp.FIELD_X, 1)
-    val fieldY = conf.getInt(DBSCANProp.FIELD_Y, 2)
-    val fieldZ = conf.getInt(DBSCANProp.FIELD_Y, 3)
-
-    val points = sc
-      .textFile(inputPath)
-      .flatMap(line => {
-        // Convert each line to a Point instance.
-        try {
-          val tokens = line.split(fieldSeparator)
-          Some(Point(tokens(fieldId).toLong, tokens(fieldX).toDouble, tokens(fieldY).toDouble, tokens(fieldZ).toDouble))
-        } catch {
-          case _: Throwable => None
-        }
+  def doMain(sc: SparkContext, df: DataFrame): DataFrame = {
+    val points: RDD[Point] = df.select("index", "index1_percent", "index2_percent", "hausdorff_percent").rdd.flatMap( 
+      row => {
+         Some(Point(row.getLong(0), row.getDouble(1), row.getDouble(2), row.getDouble(2)))
       })
 
+    val total = points.count
 
-    val numPointsPerPartition = conf.getInt(DBSCANProp.DBSCAN_NUM_POINTS_PER_PARTITION, 2000) 
-    val numPartitions = conf.getInt(DBSCANProp.DBSCAN_NUM_PARTITIONS, pow(2, (log( (points.count / numPointsPerPartition) )/log(2)).ceil).toInt)
+    if (this.numPointsPerPartition == 0) {
+      this.numPointsPerPartition = 2000
+    }
+    if (this.numPartitions == 0) {
+      this.numPartitions = pow(2, (log( (total / this.numPointsPerPartition) )/log(2)).ceil).toInt
+    }
+    if (this.eps == 0) {
+      this.eps = 2
+    }
+    if (this.cellSize == 0) {
+      this.cellSize = this.eps * 10
+    }    
+    if (this.minPoints == 0) {
+      this.minPoints = (total * 0.2).ceil.toInt
+    } else if ( total == 1){
+      this.minPoints = 1
+    // because of 20%
+    } else if ( total < 10) {
+      this.minPoints = 2
+    }
+    
+    val clustered_points = dbscan(sc, points, this.eps, this.minPoints, this.cellSize, this.numPartitions)
 
-    dbscan(sc, points, eps, minPoints, cellSize, numPartitions)
-      .map(_.toText)
-      .saveAsTextFile(outputPath)
+    val sqlContext= new org.apache.spark.sql.SQLContext(sc)
+    import sqlContext.implicits._
+
+    clustered_points.map( point => {
+        (point.id, point.clusterID)
+      }).toDF("index","cluster_id")
   }
 }
