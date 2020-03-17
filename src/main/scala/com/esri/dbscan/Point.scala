@@ -9,7 +9,7 @@ import scala.collection.mutable.ArrayBuffer
   * @param x  the horizontal 2D placement.
   * @param y  the vertical 2D placement.
   */
-class Point(val id: Long, val x: Double, val y: Double) extends Euclid {
+class Point(val id: Long, val x: Double, val y: Double, val distance: Double) extends Euclid {
 
   /**
     * Convert this point to a sequence of <code>Cell</code> instances based on its location in its parent cell.
@@ -62,7 +62,7 @@ class Point(val id: Long, val x: Double, val y: Double) extends Euclid {
   /**
     * @return text representation of this instance.
     */
-  override def toString(): String = s"Point($id,$x,$y)"
+  override def toString(): String = s"Point($id,$x,$y,$distance)"
 
 }
 
@@ -78,7 +78,7 @@ object Point extends Serializable {
     * @param y  the vertical placement
     * @return a new <code>Point</code> instance.
     */
-  def apply(id: Long, x: Double, y: Double) = {
-    new Point(id, x, y)
+  def apply(id: Long, x: Double, y: Double, distance: Double) = {
+    new Point(id, x, y, distance)
   }
 }

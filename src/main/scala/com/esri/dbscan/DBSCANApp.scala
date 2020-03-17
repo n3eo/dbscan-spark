@@ -18,7 +18,7 @@ import org.apache.spark
 
 object DBSCANApp extends App{
 
-  type Cluster = (Int, Int, Int, Int) // distance, rowID, colID, clusterID
+  type Cluster = (Int, Int, Int, Double) // rowID, colID, clusterID, distance
 
   var eps : Double = 3
   var minPoints : Int = 10
@@ -102,7 +102,7 @@ object DBSCANApp extends App{
         // Convert the points to dbscan points.
         val points = pointIter
           .map(point => {
-            DBSCANPoint(point, cell.row, cell.col, cell.distance, border.isInside(point), inside.toEmitID(point))
+            DBSCANPoint(point, cell.row, cell.col, border.isInside(point), inside.toEmitID(point))
           })
         // Perform local DBSCAN on all the points in that cell and identify each local cluster with a negative non-zero value.
         DBSCAN2(eps, minPoints).cluster(points)
@@ -113,7 +113,7 @@ object DBSCANApp extends App{
     // Create a graph that relates the distributed local clusters based on their common emitted points.
     val graph = emitted
       .filter(_.emitID > 0)
-      .map(point => point.id -> (point.row, point.col, point.distance, point.clusterID))
+      .map(point => point.id -> (point.row, point.col, point.clusterID, point.distance))
       .groupByKey(numPartitions)
       .aggregate(Graph[Cluster]())(
         (graph, tup) => {
@@ -133,7 +133,7 @@ object DBSCANApp extends App{
       .mapPartitions(iter => {
         val globalMap = globalBC.value
         iter.map(point => {
-          val key = (point.row, point.col, point.distance, point.clusterID)
+          val key = (point.row, point.col, point.clusterID, point.distance)
           point.clusterID = globalMap.getOrElse(key, point.clusterID)
           point
         })

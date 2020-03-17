@@ -16,6 +16,7 @@ class DBSCANPoint(val id: Long,
                   val y: Double,
                   val row: Int,
                   val col: Int,
+                  val distance: Double,
                   val inside: Boolean,
                   val emitID: Byte
                  ) extends Euclid {
@@ -56,23 +57,23 @@ object DBSCANPoint extends Serializable {
 
   def apply(line: String): DBSCANPoint = {
     line.split(' ') match {
-      case Array(id, x, y) => apply(id.toLong, x.toDouble, y.toDouble)
+      case Array(id, x, y, d) => apply(id.toLong, x.toDouble, y.toDouble, d.toDouble)
     }
   }
 
   def apply(point: Point): DBSCANPoint = {
-    new DBSCANPoint(point.id, point.x, point.y, 0, 0, true, 0)
+    new DBSCANPoint(point.id, point.x, point.y, 0, 0, point.distance, true, 0)
   }
 
-  def apply(id: Long, x: Double, y: Double): DBSCANPoint = {
-    new DBSCANPoint(id, x, y, 0, 0, true, 0)
+  def apply(id: Long, x: Double, y: Double, d: Double): DBSCANPoint = {
+    new DBSCANPoint(id, x, y, 0, 0, d, true, 0)
   }
 
-  def apply(id: Long, x: Double, y: Double, emitID: Byte): DBSCANPoint = {
-    new DBSCANPoint(id, x, y, 0, 0, true, emitID)
+  def apply(id: Long, x: Double, y: Double, d: Double, emitID: Byte): DBSCANPoint = {
+    new DBSCANPoint(id, x, y, 0, 0, d, true, emitID)
   }
 
   def apply(point: Point, row: Int, col: Int, inside: Boolean, emitID: Byte): DBSCANPoint = {
-    new DBSCANPoint(point.id, point.x, point.y, row, col, inside, emitID)
+    new DBSCANPoint(point.id, point.x, point.y, row, col, point.distance, inside, emitID)
   }
 }
