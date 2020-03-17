@@ -176,7 +176,7 @@ object DBSCANApp extends App{
 
     clustered_points.map( point => {
         (point.id, point.clusterID)
-      }).toDF("index","cluster_id").withColumn("cluster_id", col("cluster_id").cast(IntegerType))
+      }).toDF("index","clusterId").withColumn("clusterId", col("clusterId").cast(IntegerType))
   }
 
   def doMain(sc: SparkContext, conf: SparkConf): Unit = {
