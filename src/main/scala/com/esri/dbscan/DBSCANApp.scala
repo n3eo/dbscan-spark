@@ -6,14 +6,30 @@ import java.util.Properties
 import com.esri.dbscan.DBSCANStatus.DBSCANStatus
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
+import scala.math.{log, ceil, pow}
 
 import scala.collection.JavaConverters._
 
-object DBSCANApp extends App {
+import org.apache.spark.sql.{Dataset, Row, DataFrame}
+import org.apache.spark.sql.types.{IntegerType}
+import org.apache.spark.sql.functions.{col}
 
   type Cluster = (Int, Int, Int) // rowID, colID, clusterID
 
-  def readAppProperties(conf: SparkConf): Unit = {
+  type Cluster = (Int, Int, Int, Int) // layId, rowID, colID, clusterID
+
+  var eps : Double = 3
+  var minPoints : Int = 10
+  var cellSize : Double = 0
+  var numPartitions : Int = 0
+  var numPointsPerPartition : Int = 2000
+
+  var fieldId = 0
+  var fieldX = 1
+  var fieldY = 2
+  var fieldDistance = 3
+
+  private def readAppProperties(conf: SparkConf): Unit = {
     val filename = args.length match {
       case 0 => "application.properties"
       case _ => args(0)
@@ -149,6 +165,11 @@ object DBSCANApp extends App {
           case _: Throwable => None
         }
       })
+
+
+    val numPointsPerPartition = conf.getInt(DBSCANProp.DBSCAN_NUM_POINTS_PER_PARTITION, 2000) 
+    val numPartitions = conf.getInt(DBSCANProp.DBSCAN_NUM_PARTITIONS, pow(2, (log( (points.count / numPointsPerPartition) )/log(2)).ceil).toInt)
+
     dbscan(sc, points, eps, minPoints, cellSize, numPartitions)
       .map(_.toText)
       .saveAsTextFile(outputPath)
