@@ -14,9 +14,11 @@ import org.apache.spark.sql.{Dataset, Row, DataFrame}
 import org.apache.spark.sql.types.{IntegerType}
 import org.apache.spark.sql.functions.{col}
 
-  type Cluster = (Int, Int, Int) // rowID, colID, clusterID
+import org.apache.spark
 
-  type Cluster = (Int, Int, Int, Int) // layId, rowID, colID, clusterID
+object DBSCANApp extends App{
+
+  type Cluster = (Int, Int, Int, Int) // distance, rowID, colID, clusterID
 
   var eps : Double = 3
   var minPoints : Int = 10
@@ -68,20 +70,20 @@ import org.apache.spark.sql.functions.{col}
       classOf[Point],
       classOf[SpatialIndex]
     ))
+  var sc = SparkContext.getOrCreate(conf)
+  if (sc.getConf.get("spark.app.id") == "DBSCANApp") {
+    readAppProperties(conf)
 
-  readAppProperties(conf)
-
-  val sc = SparkContext.getOrCreate(conf)
-  try {
-    doMain(sc, conf)
-  } finally {
-    if (sc.getConf.get("spark.app.id") == "DBSCANApp") {
+    sc = SparkContext.getOrCreate(conf)
+    try {
+      doMain(sc, conf)
+    } finally {
       sc.stop()
       println("Stopped Spark")
     }
   }
 
-  def dbscan(sc: SparkContext,
+  private def dbscan(sc: SparkContext,
              points: RDD[Point],
              eps: Double,
              minPoints: Int,
@@ -100,7 +102,7 @@ import org.apache.spark.sql.functions.{col}
         // Convert the points to dbscan points.
         val points = pointIter
           .map(point => {
-            DBSCANPoint(point, cell.row, cell.col, border.isInside(point), inside.toEmitID(point))
+            DBSCANPoint(point, cell.row, cell.col, cell.distance, border.isInside(point), inside.toEmitID(point))
           })
         // Perform local DBSCAN on all the points in that cell and identify each local cluster with a negative non-zero value.
         DBSCAN2(eps, minPoints).cluster(points)
@@ -111,7 +113,7 @@ import org.apache.spark.sql.functions.{col}
     // Create a graph that relates the distributed local clusters based on their common emitted points.
     val graph = emitted
       .filter(_.emitID > 0)
-      .map(point => point.id -> (point.row, point.col, point.clusterID))
+      .map(point => point.id -> (point.row, point.col, point.distance, point.clusterID))
       .groupByKey(numPartitions)
       .aggregate(Graph[Cluster]())(
         (graph, tup) => {
@@ -131,11 +133,50 @@ import org.apache.spark.sql.functions.{col}
       .mapPartitions(iter => {
         val globalMap = globalBC.value
         iter.map(point => {
-          val key = (point.row, point.col, point.clusterID)
+          val key = (point.row, point.col, point.distance, point.clusterID)
           point.clusterID = globalMap.getOrElse(key, point.clusterID)
           point
         })
       })
+  }
+
+  def doMain(sc: SparkContext, df: DataFrame): DataFrame = {
+    val points: RDD[Point] = df.rdd.flatMap( 
+      row => {
+         Some(Point(row.getLong(0), row.getDouble(1), row.getDouble(2), row.getDouble(2)))
+      })
+
+    val total = points.count
+
+    if (this.numPointsPerPartition == 0) {
+      this.numPointsPerPartition = 2000
+    }
+    if (this.numPartitions == 0) {
+      this.numPartitions = pow(2, (log( (total / this.numPointsPerPartition) )/log(2)).ceil).toInt
+    }
+    if (this.eps == 0) {
+      this.eps = 2
+    }
+    if (this.cellSize == 0) {
+      this.cellSize = this.eps * 10
+    }    
+    if (this.minPoints == 0) {
+      this.minPoints = (total * 0.2).ceil.toInt
+    } else if ( total == 1){
+      this.minPoints = 1
+    // because of 20%
+    } else if ( total < 10) {
+      this.minPoints = 2
+    }
+    
+    val clustered_points = dbscan(sc, points, this.eps, this.minPoints, this.cellSize, this.numPartitions)
+
+    val sqlContext= new org.apache.spark.sql.SQLContext(sc)
+    import sqlContext.implicits._
+
+    clustered_points.map( point => {
+        (point.id, point.clusterID)
+      }).toDF("index","cluster_id").withColumn("cluster_id", col("cluster_id").cast(IntegerType))
   }
 
   def doMain(sc: SparkContext, conf: SparkConf): Unit = {
@@ -144,7 +185,6 @@ import org.apache.spark.sql.functions.{col}
     val eps = conf.getDouble(DBSCANProp.DBSCAN_EPS, 5)
     val minPoints = conf.getInt(DBSCANProp.DBSCAN_MIN_POINTS, 5)
     val cellSize = conf.getDouble(DBSCANProp.DBSCAN_CELL_SIZE, eps * 10.0)
-    val numPartitions = conf.getInt(DBSCANProp.DBSCAN_NUM_PARTITIONS, 8)
 
     val fieldSeparator = conf.get(DBSCANProp.FIELD_SEPARATOR, " ") match {
       case "\t" => '\t'
@@ -153,6 +193,7 @@ import org.apache.spark.sql.functions.{col}
     val fieldId = conf.getInt(DBSCANProp.FIELD_ID, 0)
     val fieldX = conf.getInt(DBSCANProp.FIELD_X, 1)
     val fieldY = conf.getInt(DBSCANProp.FIELD_Y, 2)
+    val fieldDistance = conf.getInt(DBSCANProp.FIELD_Y, 3)
 
     val points = sc
       .textFile(inputPath)
@@ -160,7 +201,7 @@ import org.apache.spark.sql.functions.{col}
         // Convert each line to a Point instance.
         try {
           val tokens = line.split(fieldSeparator)
-          Some(Point(tokens(fieldId).toLong, tokens(fieldX).toDouble, tokens(fieldY).toDouble))
+          Some(Point(tokens(fieldId).toLong, tokens(fieldX).toDouble, tokens(fieldY).toDouble, tokens(fieldDistance).toDouble))
         } catch {
           case _: Throwable => None
         }
