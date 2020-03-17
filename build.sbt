@@ -2,15 +2,15 @@ organization := "com.esri"
 
 name := "dbscan-spark"
 
-version := "0.7"
+version := "0.8"
 
-scalaVersion := "2.10.6"
+scalaVersion := "2.11"
 
 publishMavenStyle := true
 
 resolvers += Resolver.mavenLocal
 
-sparkVersion := "1.6.2"
+sparkVersion := "2.4.4"
 
 sparkComponents := Seq("core")
 
@@ -21,5 +21,5 @@ assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeSca
 mainClass in assembly := Some("com.esri.dbscan.DBSCANApp")
 
 libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "2.2.3" % "test"
+  "org.scalatest" %% "scalatest" % "3.1.1" % "test"
 )
