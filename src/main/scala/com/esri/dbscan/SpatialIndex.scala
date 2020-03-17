@@ -41,15 +41,15 @@ case class SpatialIndex(eps: Double) {
     val c = (point.x / eps).floor.toInt
     val r = (point.y / eps).floor.toInt
 
-    val xmin = point.x - eps
-    val ymin = point.y - eps
-    val xmax = point.x + eps
-    val ymax = point.y + eps
+    // val xmin = point.x - eps
+    // val ymin = point.y - eps
+    // val xmax = point.x + eps
+    // val ymax = point.y + eps
 
     (r - 1 to r + 1).flatMap(i =>
       (c - 1 to c + 1).flatMap(j =>
         grid.getOrElse((i, j), Seq.empty)
-          .filter(point => xmin < point.x && point.x < xmax && ymin < point.y && point.y < ymax)
+          .filter(point => point.distance < eps)// xmin < point.x && point.x < xmax && ymin < point.y && point.y < ymax)
       )
     )
   }
