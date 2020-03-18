@@ -62,7 +62,7 @@ class Point(val id: Long, val x: Double, val y: Double, val distance: Double) ex
   /**
     * @return text representation of this instance.
     */
-  override def toString(): String = s"Point($id,$x,$y,$distance)"
+  override def toString(): String = s"Point($id,$x,$y)"
 
 }
 

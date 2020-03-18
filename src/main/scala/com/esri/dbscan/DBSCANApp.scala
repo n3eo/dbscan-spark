@@ -18,7 +18,7 @@ import org.apache.spark
 
 object DBSCANApp extends App{
 
-  type Cluster = (Int, Int, Int, Double) // rowID, colID, clusterID, distance
+  type Cluster = (Int, Int, Int) // rowID, colID, clusterID
 
   var eps : Double = 3
   var minPoints : Int = 10
@@ -113,7 +113,7 @@ object DBSCANApp extends App{
     // Create a graph that relates the distributed local clusters based on their common emitted points.
     val graph = emitted
       .filter(_.emitID > 0)
-      .map(point => point.id -> (point.row, point.col, point.clusterID, point.distance))
+      .map(point => point.id -> (point.row, point.col, point.clusterID))
       .groupByKey(numPartitions)
       .aggregate(Graph[Cluster]())(
         (graph, tup) => {
@@ -133,7 +133,7 @@ object DBSCANApp extends App{
       .mapPartitions(iter => {
         val globalMap = globalBC.value
         iter.map(point => {
-          val key = (point.row, point.col, point.clusterID, point.distance)
+          val key = (point.row, point.col, point.clusterID)
           point.clusterID = globalMap.getOrElse(key, point.clusterID)
           point
         })
@@ -193,7 +193,7 @@ object DBSCANApp extends App{
     val fieldId = conf.getInt(DBSCANProp.FIELD_ID, 0)
     val fieldX = conf.getInt(DBSCANProp.FIELD_X, 1)
     val fieldY = conf.getInt(DBSCANProp.FIELD_Y, 2)
-    val fieldDistance = conf.getInt(DBSCANProp.FIELD_Y, 3)
+    val fieldDistance = conf.getInt(DBSCANProp.FIELD_DISTANCE, 3)
 
     val points = sc
       .textFile(inputPath)
